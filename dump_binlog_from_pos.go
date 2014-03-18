@@ -29,10 +29,10 @@ func DumpBinlogFromPos(srcFilePath string, startPos int, targetFilePath string) 
 	for {
 		if e, err := parser.ReadEventFixedHeader(headerEndPos); nil != err {
 			return err
-		} else if FORMAT_DESCRIPTION_EVENT != e.eventType && ROTATE_EVENT != e.eventType && PREVIOUS_GTIDS_LOG_EVENT != e.eventType {
+		} else if FORMAT_DESCRIPTION_EVENT != e.EventType && ROTATE_EVENT != e.EventType && PREVIOUS_GTIDS_LOG_EVENT != e.EventType {
 			break
 		} else {
-			headerEndPos = e.nextPosition
+			headerEndPos = e.NextPosition
 		}
 	}
 

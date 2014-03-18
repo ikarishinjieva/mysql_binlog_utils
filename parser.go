@@ -7,56 +7,6 @@ import (
 	"os"
 )
 
-const (
-	UNKNOWN_EVENT            = 0
-	START_EVENT_V3           = 1
-	QUERY_EVENT              = 2
-	STOP_EVENT               = 3
-	ROTATE_EVENT             = 4
-	INTVAR_EVENT             = 5
-	LOAD_EVENT               = 6
-	SLAVE_EVENT              = 7
-	CREATE_FILE_EVENT        = 8
-	APPEND_BLOCK_EVENT       = 9
-	EXEC_LOAD_EVENT          = 10
-	DELETE_FILE_EVENT        = 11
-	NEW_LOAD_EVENT           = 12
-	RAND_EVENT               = 13
-	USER_VAR_EVENT           = 14
-	FORMAT_DESCRIPTION_EVENT = 15
-	XID_EVENT                = 16
-	BEGIN_LOAD_QUERY_EVENT   = 17
-	EXECUTE_LOAD_QUERY_EVENT = 18
-	TABLE_MAP_EVENT          = 19
-	PRE_GA_WRITE_ROWS_EVENT  = 20
-	PRE_GA_UPDATE_ROWS_EVENT = 21
-	PRE_GA_DELETE_ROWS_EVENT = 22
-	WRITE_ROWS_EVENT_V1      = 23
-	UPDATE_ROWS_EVENT_V1     = 24
-	DELETE_ROWS_EVENT_V1     = 25
-	INCIDENT_EVENT           = 26
-	HEARTBEAT_LOG_EVENT      = 27
-	IGNORABLE_LOG_EVENT      = 28
-	ROWS_QUERY_LOG_EVENT     = 29
-	WRITE_ROWS_EVENT         = 30
-	UPDATE_ROWS_EVENT        = 31
-	DELETE_ROWS_EVENT        = 32
-	GTID_LOG_EVENT           = 33
-	ANONYMOUS_GTID_LOG_EVENT = 34
-	PREVIOUS_GTIDS_LOG_EVENT = 35
-)
-
-const (
-	LOG_EVENT_MINIMAL_HEADER_LEN = 19
-	MAX_ALLOWED_PACKET           = 1024 * 1024 * 1024
-)
-
-type EventFixedHeader struct {
-	eventType    int
-	eventLength  int
-	nextPosition int
-}
-
 type BinlogFileParser struct {
 	filename      string
 	file          *os.File
@@ -131,28 +81,47 @@ func (b *BinlogFileParser) FileSize() int {
 
 func (b *BinlogFileParser) ReadEventFixedHeader(startPos int) (EventFixedHeader, error) {
 	ret := EventFixedHeader{}
+
+	if a, err := b.readInt(startPos+0, 4); nil != err {
+		return ret, err
+	} else {
+		ret.Timestamp = int(a)
+	}
+
 	if buf, err := b.readBytes(startPos+4, 1); nil != err {
 		return ret, err
 	} else {
-		ret.eventType = int(buf[0])
+		ret.EventType = int(buf[0])
+	}
+
+	if a, err := b.readInt(startPos+5, 4); nil != err {
+		return ret, err
+	} else {
+		ret.ServerId = int(a)
 	}
 
 	if a, err := b.readInt(startPos+9, 4); nil != err {
 		return ret, err
 	} else {
-		ret.eventLength = int(a)
-		if ret.eventLength > MAX_ALLOWED_PACKET {
-			return ret, fmt.Errorf("event length (%v) > MAX_ALLOWED_PACKET", ret.eventLength)
+		ret.EventLength = int(a)
+		if ret.EventLength > MAX_ALLOWED_PACKET {
+			return ret, fmt.Errorf("event length (%v) > MAX_ALLOWED_PACKET", ret.EventLength)
 		}
-		if ret.eventLength < LOG_EVENT_MINIMAL_HEADER_LEN {
-			return ret, fmt.Errorf("event length (%v) < LOG_EVENT_MINIMAL_HEADER_LEN", ret.eventLength)
+		if ret.EventLength < LOG_EVENT_FIXED_HEADER_LEN {
+			return ret, fmt.Errorf("event length (%v) < LOG_EVENT_FIXED_HEADER_LEN", ret.EventLength)
 		}
 	}
 
 	if a, err := b.readInt(startPos+13, 4); nil != err {
 		return ret, err
 	} else {
-		ret.nextPosition = int(a)
+		ret.NextPosition = int(a)
+	}
+
+	if a, err := b.readInt(startPos+17, 2); nil != err {
+		return ret, err
+	} else {
+		ret.Flags = int(a)
 	}
 
 	return ret, nil
