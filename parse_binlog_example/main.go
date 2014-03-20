@@ -1,4 +1,4 @@
-package parse_binlog_example
+package main
 
 import (
 	util ".."
