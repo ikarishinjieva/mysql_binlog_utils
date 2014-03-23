@@ -1,8 +1,6 @@
 package mysql_binlog_util
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"os"
 )
@@ -48,21 +46,29 @@ func (b *BinlogFileParser) Destroy() error {
 
 func (b *BinlogFileParser) readBytes(startPos int, count int) ([]byte, error) {
 	buf := make([]byte, count)
+	stat, _ := b.file.Stat()
+	if int64(startPos) >= stat.Size() {
+		return nil, fmt.Errorf("EOF")
+	}
 	if c, err := b.file.ReadAt(buf, int64(startPos)); count != c || nil != err {
 		return nil, fmt.Errorf("read binlog file %v (startPos=%v) failed, err=%v, count=%v (expect to %v)", b.filename, startPos, err, c, count)
 	} else {
-		tracef("read binlog file %v (startPos=%v), count=%v, ret=%+v\n", b.filename, startPos, count, buf)
+		tracef("read binlog file %v (startPos=%v), count=%v", b.filename, startPos, count)
 		return buf, nil
 	}
 }
 
-func (b *BinlogFileParser) readInt(startPos int, count int) (int, error) {
+func (b *BinlogFileParser) readInt(startPos int, count int) (uint, error) {
 	if buf, err := b.readBytes(startPos, count); nil != err {
 		return 0, err
-	} else if l, err := binary.ReadUvarint(bytes.NewBuffer(buf)); nil != err {
-		return 0, err
 	} else {
-		return int(l), nil
+		var a uint
+		var i uint
+		for _, b := range buf {
+			a += uint(b) << i
+			i += 8
+		}
+		return a, nil
 	}
 }
 
@@ -125,4 +131,14 @@ func (b *BinlogFileParser) ReadEventFixedHeader(startPos int) (EventFixedHeader,
 	}
 
 	return ret, nil
+}
+
+func (b *BinlogFileParser) ReadEventBytes(startPos int) (EventFixedHeader, []byte, error) {
+	if header, err := b.ReadEventFixedHeader(startPos); nil != err {
+		return header, nil, err
+	} else if bytes, err := b.readBytes(startPos, header.EventLength); nil != err {
+		return header, nil, err
+	} else {
+		return header, bytes, nil
+	}
 }

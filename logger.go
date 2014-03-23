@@ -11,3 +11,7 @@ func tracef(fmt string, args ...interface{}) {
 		l.Tracef(fmt, args...)
 	}
 }
+
+func SetLogger(logger Logger) {
+	l = logger
+}

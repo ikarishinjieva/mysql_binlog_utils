@@ -17,10 +17,3 @@ func GenBinlogEventBytes(fh EventFixedHeader, fd EventFixedData, vd EventVariabl
 	copy(buf[19+len(fd.Bytes):], vd.Bytes)
 	return buf, nil
 }
-
-func intToBytes(num int, buf []byte) {
-	for i := 0; i < len(buf); i++ {
-		buf[i] = byte(num & 0xff)
-		num = num >> 8
-	}
-}

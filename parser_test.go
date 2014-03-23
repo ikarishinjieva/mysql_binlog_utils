@@ -1,6 +1,7 @@
 package mysql_binlog_util
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -33,5 +34,21 @@ func TestReadEventFixedHeader(t *testing.T) {
 		t.Errorf("expect eventLength=103 but got %v", e.EventLength)
 	} else if e.NextPosition != 107 {
 		t.Errorf("expect nextPosition=107 but got %v", e.NextPosition)
+	}
+}
+
+type StdLogger struct{}
+
+func (s *StdLogger) Tracef(f string, args ...interface{}) {
+	fmt.Printf(f, args...)
+}
+
+func TestReadEventFixedHeader2(t *testing.T) {
+	SetLogger(&StdLogger{})
+	p, _ := NewBinlogFileParserByPath("./test/test-mysql-bin")
+	defer p.Destroy()
+	if e, err := p.ReadEventFixedHeader(562); nil != err {
+	} else {
+		fmt.Printf("%+v", e)
 	}
 }

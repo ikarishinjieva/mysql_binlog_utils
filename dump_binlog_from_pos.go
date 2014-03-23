@@ -21,9 +21,11 @@ func DumpBinlogFromPos(srcFilePath string, startPos int, targetFilePath string) 
 	}
 	defer parser.Destroy()
 
-	if startPos >= parser.FileSize() {
+	if startPos > parser.FileSize() {
 		return fmt.Errorf("startPos (%v) >= binlog file size (%v)", startPos, parser.FileSize())
 	}
+
+	emptyFile := startPos == parser.FileSize()
 
 	headerEndPos := 4
 	for {
@@ -32,7 +34,7 @@ func DumpBinlogFromPos(srcFilePath string, startPos int, targetFilePath string) 
 		} else if FORMAT_DESCRIPTION_EVENT != e.EventType && ROTATE_EVENT != e.EventType && PREVIOUS_GTIDS_LOG_EVENT != e.EventType {
 			break
 		} else {
-			headerEndPos = e.NextPosition
+			headerEndPos = headerEndPos + e.EventLength
 		}
 	}
 
@@ -43,30 +45,28 @@ func DumpBinlogFromPos(srcFilePath string, startPos int, targetFilePath string) 
 	if target, err := os.Create(targetFilePath); nil != err {
 		return err
 	} else {
+		defer target.Close()
 		if _, err := srcFile.Seek(0, 0); nil != err {
-			target.Close()
 			os.Remove(targetFilePath)
 			return err
 		}
 
 		if _, err := io.CopyN(target, srcFile, int64(headerEndPos)); nil != err {
-			target.Close()
 			os.Remove(targetFilePath)
 			return err
 		}
 
-		if _, err := srcFile.Seek(int64(startPos), 0); nil != err {
-			target.Close()
-			os.Remove(targetFilePath)
-			return err
-		}
+		if !emptyFile {
+			if _, err := srcFile.Seek(int64(startPos), 0); nil != err {
+				os.Remove(targetFilePath)
+				return err
+			}
 
-		if _, err := io.Copy(target, srcFile); nil != err {
-			target.Close()
-			os.Remove(targetFilePath)
-			return err
+			if _, err := io.Copy(target, srcFile); nil != err {
+				os.Remove(targetFilePath)
+				return err
+			}
 		}
-		defer target.Close()
 	}
 
 	return nil
