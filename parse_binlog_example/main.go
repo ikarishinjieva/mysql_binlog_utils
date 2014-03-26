@@ -8,7 +8,7 @@ import (
 func main() {
 
 	//parse binlog example
-	p, err := util.NewBinlogFileParserByPath("/Users/Tac/Code/actionsky/actionsky-ha/actionsky-ha-jruby/vm/x86_64/mysql-relay-bin.000004")
+	p, err := util.NewBinlogFileParserByPath("/Users/Tac/Code/mysql_vm/mysql-bin.000013")
 	if nil != err {
 		fmt.Printf("err=%v\n", err)
 	}
@@ -21,7 +21,7 @@ func main() {
 			return
 		} else {
 			fmt.Printf("event=%+v\n", e)
-			pos = e.NextPosition
+			pos = pos + e.EventLength //e.NextPosition is not reliable
 			if 0 == pos {
 				fmt.Printf("done\n")
 				return
