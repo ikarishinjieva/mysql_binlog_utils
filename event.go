@@ -1,4 +1,4 @@
-package mysql_binlog_util
+package mysql_binlog_utils
 
 const (
 	UNKNOWN_EVENT            = 0

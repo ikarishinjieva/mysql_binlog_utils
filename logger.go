@@ -1,4 +1,4 @@
-package mysql_binlog_util
+package mysql_binlog_utils
 
 type Logger interface {
 	Tracef(fmt string, args ...interface{})
