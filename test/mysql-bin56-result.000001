@@ -1,0 +1,41 @@
+/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=1*/;
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+# at 4
+#140417 15:50:36 server id 904898000  end_log_pos 120 CRC32 0x96973caa 
+# Position  Timestamp   Type   Master ID        Size      Master Pos    Flags 
+#        4 cc 87 4f 53   0f   d0 a5 ef 35   74 00 00 00   78 00 00 00   00 00
+#       17 04 00 35 2e 36 2e 31 37  2d 6c 6f 67 00 00 00 00 |..5.6.17.log....|
+#       27 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|
+#       37 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|
+#       47 00 00 00 00 cc 87 4f 53  13 38 0d 00 08 00 12 00 |......OS.8......|
+#       57 04 04 04 04 12 00 00 5c  00 04 1a 08 00 00 00 08 |................|
+#       67 08 08 02 00 00 00 0a 0a  0a 19 19 00 01 aa 3c 97 |................|
+#       77 96                                               |.|
+# 	Start: binlog v 4, server v 5.6.17-log created 140417 15:50:36 at startup
+ROLLBACK/*!*/;
+BINLOG '
+zIdPUw/Qpe81dAAAAHgAAAAAAAQANS42LjE3LWxvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAADMh09TEzgNAAgAEgAEBAQEEgAAXAAEGggAAAAICAgCAAAACgoKGRkAAao8
+l5Y=
+'/*!*/;
+# at 120
+#140417 15:50:36 server id 904898000  end_log_pos 151 CRC32 0x4c0fdc5d 
+# Position  Timestamp   Type   Master ID        Size      Master Pos    Flags 
+#       78 cc 87 4f 53   23   d0 a5 ef 35   1f 00 00 00   97 00 00 00   00 00
+#       8b 00 00 00 00 00 00 00 00  5d dc 0f 4c             |...........L|
+# 	Previous-GTIDs
+# [empty]
+# at 151
+#140417 15:50:36 server id 904898000  end_log_pos 198 CRC32 0x17701320 
+# Position  Timestamp   Type   Master ID        Size      Master Pos    Flags 
+#       97 cc 87 4f 53   04   d0 a5 ef 35   2f 00 00 00   c6 00 00 00   00 00
+#       aa 04 00 00 00 00 00 00 00  6d 79 73 71 6c 2d 62 69 |........mysql.bi|
+#       ba 6e 2e 30 30 30 30 30 32  20 13 70 17             |n.000002..p.|
+# 	Rotate to mysql-bin.000002  pos: 4
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=0*/;
