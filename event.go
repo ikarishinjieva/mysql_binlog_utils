@@ -48,7 +48,7 @@ type EventFixedHeader struct {
 	Timestamp    int
 	EventType    int
 	ServerId     int
-	EventLength  int
+	EventLength  uint
 	NextPosition int
 	Flags        int
 }

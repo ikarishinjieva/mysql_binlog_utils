@@ -9,7 +9,7 @@ type BinlogFileParser struct {
 	filename      string
 	file          *os.File
 	needCloseFile bool
-	fileSize      int
+	fileSize      uint
 }
 
 func NewBinlogFileParser(file *os.File) (*BinlogFileParser, error) {
@@ -19,7 +19,7 @@ func NewBinlogFileParser(file *os.File) (*BinlogFileParser, error) {
 	} else {
 		ret.file = file
 		ret.filename = file.Name()
-		ret.fileSize = int(a.Size()) //binlog file size is no more than an int
+		ret.fileSize = uint(a.Size()) //binlog file size is no more than an uint
 	}
 	if err := ret.VerifyMagicNumber(); nil != err {
 		return nil, err
@@ -44,13 +44,13 @@ func (b *BinlogFileParser) Destroy() error {
 	return nil
 }
 
-func (b *BinlogFileParser) readBytes(startPos int, count int) ([]byte, error) {
+func (b *BinlogFileParser) readBytes(startPos uint, count uint) ([]byte, error) {
 	buf := make([]byte, count)
 	stat, _ := b.file.Stat()
 	if int64(startPos) >= stat.Size() {
 		return nil, fmt.Errorf("EOF")
 	}
-	if c, err := b.file.ReadAt(buf, int64(startPos)); count != c || nil != err {
+	if c, err := b.file.ReadAt(buf, int64(startPos)); count != uint(c) || nil != err {
 		return nil, fmt.Errorf("read binlog file %v (startPos=%v) failed, err=%v, count=%v (expect to %v)", b.filename, startPos, err, c, count)
 	} else {
 		tracef("read binlog file %v (startPos=%v), count=%v", b.filename, startPos, count)
@@ -58,7 +58,7 @@ func (b *BinlogFileParser) readBytes(startPos int, count int) ([]byte, error) {
 	}
 }
 
-func (b *BinlogFileParser) readInt(startPos int, count int) (uint, error) {
+func (b *BinlogFileParser) readUint(startPos uint, count uint) (uint, error) {
 	if buf, err := b.readBytes(startPos, count); nil != err {
 		return 0, err
 	} else {
@@ -81,35 +81,35 @@ func (b *BinlogFileParser) VerifyMagicNumber() error {
 	return nil
 }
 
-func (b *BinlogFileParser) FileSize() int {
+func (b *BinlogFileParser) FileSize() uint {
 	return b.fileSize
 }
 
-func (b *BinlogFileParser) ReadEventFixedHeader(startPos int) (EventFixedHeader, error) {
+func (b *BinlogFileParser) ReadEventFixedHeader(startPos uint) (EventFixedHeader, error) {
 	ret := EventFixedHeader{}
 
-	if a, err := b.readInt(startPos+0, 4); nil != err {
+	if a, err := b.readUint(startPos+uint(0), 4); nil != err {
 		return ret, err
 	} else {
 		ret.Timestamp = int(a)
 	}
 
-	if buf, err := b.readBytes(startPos+4, 1); nil != err {
+	if buf, err := b.readBytes(startPos+uint(4), 1); nil != err {
 		return ret, err
 	} else {
 		ret.EventType = int(buf[0])
 	}
 
-	if a, err := b.readInt(startPos+5, 4); nil != err {
+	if a, err := b.readUint(startPos+uint(5), 4); nil != err {
 		return ret, err
 	} else {
 		ret.ServerId = int(a)
 	}
 
-	if a, err := b.readInt(startPos+9, 4); nil != err {
+	if a, err := b.readUint(startPos+uint(9), 4); nil != err {
 		return ret, err
 	} else {
-		ret.EventLength = int(a)
+		ret.EventLength = a
 		if ret.EventLength > MAX_ALLOWED_PACKET {
 			return ret, fmt.Errorf("event length (%v) > MAX_ALLOWED_PACKET", ret.EventLength)
 		}
@@ -118,13 +118,13 @@ func (b *BinlogFileParser) ReadEventFixedHeader(startPos int) (EventFixedHeader,
 		}
 	}
 
-	if a, err := b.readInt(startPos+13, 4); nil != err {
+	if a, err := b.readUint(startPos+uint(13), 4); nil != err {
 		return ret, err
 	} else {
 		ret.NextPosition = int(a)
 	}
 
-	if a, err := b.readInt(startPos+17, 2); nil != err {
+	if a, err := b.readUint(startPos+uint(17), 2); nil != err {
 		return ret, err
 	} else {
 		ret.Flags = int(a)
@@ -133,7 +133,7 @@ func (b *BinlogFileParser) ReadEventFixedHeader(startPos int) (EventFixedHeader,
 	return ret, nil
 }
 
-func (b *BinlogFileParser) ReadEventBytes(startPos int) (EventFixedHeader, []byte, error) {
+func (b *BinlogFileParser) ReadEventBytes(startPos uint) (EventFixedHeader, []byte, error) {
 	if header, err := b.ReadEventFixedHeader(startPos); nil != err {
 		return header, nil, err
 	} else if bytes, err := b.readBytes(startPos, header.EventLength); nil != err {

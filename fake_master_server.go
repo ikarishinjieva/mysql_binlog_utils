@@ -359,7 +359,7 @@ func (f *FakeMasterServer) handleComBinlogDump(packet *Packet, conn net.Conn) er
 
 		//transfer binlog header first
 		if 4 != pos {
-			p := 4
+			p := uint(4)
 			for {
 				if header, bs, err := parser.ReadEventBytes(p); nil != err {
 					return err
@@ -374,7 +374,7 @@ func (f *FakeMasterServer) handleComBinlogDump(packet *Packet, conn net.Conn) er
 					}
 
 					seq = nextSeq
-					p = p + header.EventLength
+					p = p + uint(header.EventLength)
 				}
 			}
 		}
@@ -418,7 +418,7 @@ func (f *FakeMasterServer) handleComBinlogDump(packet *Packet, conn net.Conn) er
 				}
 			}
 			seq = nextSeq
-			pos = pos + header.EventLength
+			pos = pos + uint(header.EventLength)
 		}
 	}
 

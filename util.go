@@ -1,11 +1,17 @@
 package mysql_binlog_utils
 
 import (
-	"bytes"
-	"encoding/binary"
+	"fmt"
 )
 
 func intToBytes(num int, buf []byte) []byte {
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(num & 0xff)
+		num = num >> 8
+	}
+	return buf
+}
+func uintToBytes(num uint, buf []byte) []byte {
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(num & 0xff)
 		num = num >> 8
@@ -19,10 +25,29 @@ func stringNullToBytes(a string) []byte {
 	return ret
 }
 
-func bytesToUint(a []byte) int {
-	if a, err := binary.ReadUvarint(bytes.NewBuffer(a)); nil != err {
-		panic(err)
-	} else {
-		return int(a)
+func bytesToUint(buf []byte) uint {
+	var a uint
+	var i uint
+	for _, b := range buf {
+		a += uint(b) << i
+		i += 8
 	}
+	return a
+}
+
+func bytesToUint64(buf []byte) uint64 {
+	var a uint64
+	var i uint
+	for _, b := range buf {
+		a += uint64(b) << i
+		i += 8
+	}
+	return a
+}
+
+func bytesToUuid(buf []byte) (ret string) {
+	for _, b := range buf {
+		ret = ret + fmt.Sprintf("%02X", b)
+	}
+	return ret
 }

@@ -56,5 +56,24 @@ Argument|_
 `baseDir` | where the binlog files are located
 
 
+Get unexecuted binlog files by gtid
+----
+
+`GetUnexecutedBinlogFilesByGtid(binlogDir string, binlogBaseName string, executedGtidDesc string) (ret []string, err error)`
+
+This function will search binlog files in `binlogDir`, for the one contains a event whose gtid is not contained in `executedGtidDesc`
+
+The scenario is in mysql replication, if mysql master is broken, mysql slave can call `GetUnexecutedBinlogFilesByGtid` to search in mysql master binlog dir, for the binlog files which need to be replay in slave
+
+
+Get unexecuted binlog pos by gtid
+---
+
+`GetUnexecutedBinlogPosByGtid(binlogFilePath string, executedGtidDesc string) (pos uint, err error) `
+
+This function will search first binlog event pos, which is not contained in `executedGtidDesc`, in binlog file (`binlogFilePath`)
+
+Or return `EOF` error if has no unexecuted binlog event
+
 ----
 ####Pull requests and issues are warmly welcome

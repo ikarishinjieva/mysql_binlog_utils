@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func DumpBinlogFromPos(srcFilePath string, startPos int, targetFilePath string) error {
+func DumpBinlogFromPos(srcFilePath string, startPos uint, targetFilePath string) error {
 	tracef("dump binlog from pos : srcFilePath=%v, startPos=%v, targetFilePath=%v", srcFilePath, startPos, targetFilePath)
 	srcFile, err := os.Open(srcFilePath)
 	if nil != err {
@@ -27,7 +27,7 @@ func DumpBinlogFromPos(srcFilePath string, startPos int, targetFilePath string) 
 
 	emptyFile := startPos == parser.FileSize()
 
-	headerEndPos := 4
+	headerEndPos := uint(4)
 	for {
 		if e, err := parser.ReadEventFixedHeader(headerEndPos); nil != err {
 			return err
