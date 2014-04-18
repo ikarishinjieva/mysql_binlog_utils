@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func DumpBinlogFromPos(srcFilePath string, startPos uint, targetFilePath string) error {
+func innerDumpBinlogFromPos(srcFilePath string, startPos uint, dumpEmptyBinlog bool, targetFilePath string) error {
 	tracef("dump binlog from pos : srcFilePath=%v, startPos=%v, targetFilePath=%v", srcFilePath, startPos, targetFilePath)
 	srcFile, err := os.Open(srcFilePath)
 	if nil != err {
@@ -20,6 +20,10 @@ func DumpBinlogFromPos(srcFilePath string, startPos uint, targetFilePath string)
 		return err
 	}
 	defer parser.Destroy()
+
+	if dumpEmptyBinlog {
+		startPos = parser.FileSize()
+	}
 
 	if startPos > parser.FileSize() {
 		return fmt.Errorf("startPos (%v) >= binlog file size (%v)", startPos, parser.FileSize())
@@ -70,4 +74,20 @@ func DumpBinlogFromPos(srcFilePath string, startPos uint, targetFilePath string)
 	}
 
 	return nil
+}
+
+func DumpBinlogFromPos(srcFilePath string, startPos uint, targetFilePath string) error {
+	return innerDumpBinlogFromPos(srcFilePath, startPos, false, targetFilePath)
+}
+
+func DumpUnexecutedBinlogByGtid(srcFilePath string, executedGtidDesc string, targetFilePath string) error {
+	pos, err := GetUnexecutedBinlogPosByGtid(srcFilePath, executedGtidDesc)
+	if nil != err && "EOF" == err.Error() {
+		if "EOF" == err.Error() {
+			return innerDumpBinlogFromPos(srcFilePath, 0, true, targetFilePath)
+		} else {
+			return err
+		}
+	}
+	return innerDumpBinlogFromPos(srcFilePath, pos, false, targetFilePath)
 }
