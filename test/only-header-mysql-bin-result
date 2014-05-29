@@ -1,0 +1,16 @@
+/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=1*/;
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+# at 4
+#140529 15:45:54 server id 1318224853  end_log_pos 120 CRC32 0x66b2abd3 	Start: binlog v 4, server v 5.6.17-log created 140529 15:45:54
+# Warning: this binlog is either in use or was not closed properly.
+# at 120
+#140529 15:45:54 server id 1318224853  end_log_pos 231 CRC32 0xde0f0e71 	Previous-GTIDs
+# 5ade491e-e611-11e3-9f17-e66ccf50db66:1-186,
+# e57ada8e-e610-11e3-9f14-5e10e6a05cfb:6
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=0*/;

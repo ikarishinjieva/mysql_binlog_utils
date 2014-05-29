@@ -33,6 +33,9 @@ func innerDumpBinlogFromPos(srcFilePath string, startPos uint, dumpEmptyBinlog b
 
 	headerEndPos := uint(4)
 	for {
+		if headerEndPos >= parser.FileSize() {
+			break
+		}
 		if e, err := parser.ReadEventFixedHeader(headerEndPos); nil != err {
 			return err
 		} else if FORMAT_DESCRIPTION_EVENT != e.EventType && ROTATE_EVENT != e.EventType && PREVIOUS_GTIDS_LOG_EVENT != e.EventType {
@@ -42,7 +45,9 @@ func innerDumpBinlogFromPos(srcFilePath string, startPos uint, dumpEmptyBinlog b
 		}
 	}
 
-	if startPos < headerEndPos {
+	if headerEndPos >= parser.FileSize() {
+		emptyFile = true
+	} else if startPos < headerEndPos {
 		return fmt.Errorf("dump binlog from startPos (%v) failed, pos < headerEndPos (%v) ", startPos, headerEndPos)
 	}
 
