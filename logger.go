@@ -8,7 +8,7 @@ var l Logger
 
 func tracef(fmt string, args ...interface{}) {
 	if nil != l {
-		l.Tracef(fmt, args...)
+		l.Tracef(fmt+"\n", args...)
 	}
 }
 
