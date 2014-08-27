@@ -1,7 +1,8 @@
 package mysql_binlog_utils
 
 import (
-	"fmt"
+	"encoding/hex"
+	"strings"
 )
 
 func intToBytes(num int, buf []byte) []byte {
@@ -46,8 +47,5 @@ func bytesToUint64(buf []byte) uint64 {
 }
 
 func bytesToUuid(buf []byte) (ret string) {
-	for _, b := range buf {
-		ret = ret + fmt.Sprintf("%02X", b)
-	}
-	return ret
+	return strings.ToUpper(hex.EncodeToString(buf))
 }
