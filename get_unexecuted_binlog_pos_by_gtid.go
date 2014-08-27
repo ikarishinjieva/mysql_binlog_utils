@@ -22,7 +22,7 @@ func GetUnexecutedBinlogPosByGtid(binlogFilePath string, executedGtidDesc string
 		pos uint
 		err error
 	}
-	processQueue := make(chan *tProcessQueueElement, 1000)
+	processQueue := make(chan *tProcessQueueElement, 100)
 
 	//read thread
 	go func() {
