@@ -2,7 +2,6 @@ package mysql_binlog_utils
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -49,23 +48,25 @@ func parseGtid(desc string) (gtid tGtid, err error) {
 			sid.serverUuid = strings.ToUpper(strings.Replace(a[0], "-", "", -1))
 			for i := 1; i < len(a); i++ {
 				interval := tInterval{}
-				if p := regexp.MustCompile("(\\d+)\\-(\\d+)"); p.MatchString(a[i]) {
-					matches := p.FindStringSubmatch(a[i])
-					if i64, err := strconv.ParseUint(matches[1], 10, 64); nil == err {
+				seg := a[i]
+				if splitPos := strings.Index(seg, "-"); -1 != splitPos {
+					firstPart := string(seg[0:splitPos])
+					if i64, err := strconv.ParseUint(firstPart, 10, 64); nil == err {
 						interval.from = i64
 					} else {
-						return gtid, fmt.Errorf("invalid number %v", matches[1])
+						return gtid, fmt.Errorf("invalid number %v", firstPart)
 					}
-					if i64, err := strconv.ParseUint(matches[2], 10, 64); nil == err {
+					secondPart := string(seg[splitPos+1:])
+					if i64, err := strconv.ParseUint(secondPart, 10, 64); nil == err {
 						interval.to = i64
 					} else {
-						return gtid, fmt.Errorf("invalid number %v", matches[2])
+						return gtid, fmt.Errorf("invalid number %v", secondPart)
 					}
-				} else if i64, err := strconv.ParseUint(a[i], 10, 64); nil == err {
+				} else if i64, err := strconv.ParseUint(seg, 10, 64); nil == err {
 					interval.from = i64
 					interval.to = i64
 				} else {
-					return gtid, fmt.Errorf("invalid number %v", a[i])
+					return gtid, fmt.Errorf("invalid number %v", seg)
 				}
 				sid.intervals = append(sid.intervals, interval)
 			}
