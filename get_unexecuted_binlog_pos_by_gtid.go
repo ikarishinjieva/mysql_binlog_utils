@@ -16,27 +16,100 @@ func GetUnexecutedBinlogPosByGtid(binlogFilePath string, executedGtidDesc string
 		return 0, err
 	}
 
-	p := uint(4)
-	for {
-		header, bs, err := parser.ReadEventBytes(p)
-		if nil != err {
-			return 0, err
-		}
-		if GTID_LOG_EVENT != header.EventType {
-			p += header.EventLength
-			continue
-		}
+	poison := make(chan bool, 2)
+	type tProcessQueueElement struct {
+		bs  []byte
+		pos uint
+		err error
+	}
+	processQueue := make(chan *tProcessQueueElement, 1000)
 
-		pos := 19
-		uuid := bytesToUuid(bs[pos+1 : pos+17])
-		number := bytesToUint64(bs[pos+17 : pos+17+8])
-		gtid, err := parseGtid(fmt.Sprintf("%v:%v", uuid, number))
-		if nil != err {
-			return 0, err
+	//read thread
+	go func() {
+		p := uint(4)
+		for {
+			select {
+			case <-poison:
+				return
+			default:
+			}
+			header, bs, err := parser.ReadEventBytes(p)
+			if nil != err {
+				select {
+				case <-poison:
+					return
+				case processQueue <- &tProcessQueueElement{nil, 0, err}:
+				}
+				return
+			}
+			if GTID_LOG_EVENT != header.EventType {
+				p += header.EventLength
+				continue
+			}
+			select {
+			case <-poison:
+				return
+			case processQueue <- &tProcessQueueElement{bs, p, nil}:
+			}
+
+			p += header.EventLength
 		}
-		if !containsGtid(executedGtid, gtid) {
-			return p, nil
+	}()
+
+	//process thread
+
+	type tReturnQueueElement struct {
+		pos uint
+		err error
+	}
+	returnQueue := make(chan *tReturnQueueElement, 1)
+
+	go func() {
+		for {
+			var ele *tProcessQueueElement
+			select {
+			case <-poison:
+				return
+			case ele = <-processQueue:
+			}
+			if nil != ele.err {
+				select {
+				case <-poison:
+					return
+				case returnQueue <- &tReturnQueueElement{0, ele.err}:
+				}
+				return
+			}
+			bs := ele.bs
+			uuid := bytesToUuid(bs[19+1 : 19+17])
+			number := bytesToUint64(bs[19+17 : 19+17+8])
+			gtid, err := parseGtid(fmt.Sprintf("%v:%v", uuid, number))
+			if nil != err {
+				select {
+				case <-poison:
+					return
+				case returnQueue <- &tReturnQueueElement{0, err}:
+				}
+				return
+			}
+			if !containsGtid(executedGtid, gtid) {
+				select {
+				case <-poison:
+					return
+				case returnQueue <- &tReturnQueueElement{ele.pos, nil}:
+				}
+				return
+			}
 		}
-		p += header.EventLength
+	}()
+
+	defer func() {
+		poison <- true
+		poison <- true
+	}()
+
+	select {
+	case ret := <-returnQueue:
+		return ret.pos, ret.err
 	}
 }
