@@ -45,6 +45,7 @@ const (
 )
 
 type EventFixedHeader struct {
+	Bytes        []byte
 	Timestamp    int
 	EventType    int
 	ServerId     int

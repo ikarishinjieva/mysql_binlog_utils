@@ -1,15 +1,18 @@
 package mysql_binlog_utils
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 )
 
 type BinlogFileParser struct {
-	filename      string
-	file          *os.File
-	needCloseFile bool
-	fileSize      uint
+	filename       string
+	file           *os.File
+	needCloseFile  bool
+	fileSize       uint
+	bufReader      *bufio.Reader
+	lastBufReadPos uint
 }
 
 func NewBinlogFileParser(file *os.File) (*BinlogFileParser, error) {
@@ -17,9 +20,15 @@ func NewBinlogFileParser(file *os.File) (*BinlogFileParser, error) {
 	if a, err := file.Stat(); nil != err {
 		return nil, err
 	} else {
+		_, err := file.Seek(0, 0)
+		if nil != err {
+			return nil, err
+		}
 		ret.file = file
 		ret.filename = file.Name()
 		ret.fileSize = uint(a.Size()) //binlog file size is no more than an uint
+		ret.bufReader = bufio.NewReaderSize(file, 10*1024)
+		ret.lastBufReadPos = 0
 	}
 	if err := ret.VerifyMagicNumber(); nil != err {
 		return nil, err
@@ -46,16 +55,29 @@ func (b *BinlogFileParser) Destroy() error {
 
 func (b *BinlogFileParser) readBytes(startPos uint, count uint) ([]byte, error) {
 	buf := make([]byte, count)
-	if c, err := b.file.ReadAt(buf, int64(startPos)); count != uint(c) || nil != err {
-		if nil != err && "EOF" == err.Error() {
+	// fmt.Printf("startPos=%v, count=%v, lastBufReadPos=%v\n", startPos, count, b.lastBufReadPos)
+	force := false
+	if startPos != b.lastBufReadPos || force {
+		_, err := b.file.Seek(int64(startPos), 0)
+		if nil != err {
 			return nil, err
-		} else {
-			return nil, fmt.Errorf("read binlog file %v (startPos=%v) failed, err=%v, count=%v (expect to %v)", b.filename, startPos, err, c, count)
 		}
-	} else {
-		tracef("read binlog file %v (startPos=%v), count=%v", b.filename, startPos, count)
-		return buf, nil
+		b.bufReader.Reset(b.file)
 	}
+
+	readCount := uint(0)
+
+	for readCount < count {
+		c, err := b.bufReader.Read(buf[readCount:])
+		if nil != err {
+			return nil, err
+		}
+		readCount += uint(c)
+	}
+	b.lastBufReadPos = startPos + count
+	// fmt.Printf("buf=%v\n", buf)
+	tracef("read binlog file %v (startPos=%v), count=%v", b.filename, startPos, count)
+	return buf, nil
 }
 
 func (b *BinlogFileParser) readUint(startPos uint, count uint) (uint, error) {
@@ -96,7 +118,7 @@ func (b *BinlogFileParser) ReadEventFixedHeader(startPos uint) (EventFixedHeader
 	if nil != err {
 		return ret, err
 	}
-
+	ret.Bytes = buf
 	ret.Timestamp = int(b.toUint(buf[0:4]))
 	ret.EventType = int(buf[4])
 	ret.ServerId = int(b.toUint(buf[5:9]))
@@ -118,9 +140,9 @@ func (b *BinlogFileParser) ReadEventBytes(startPos uint) (EventFixedHeader, []by
 	if nil != err {
 		return header, nil, err
 	}
-	bytes, err := b.readBytes(startPos, header.EventLength)
+	remainBytes, err := b.readBytes(startPos+19, header.EventLength-19)
 	if nil != err {
 		return header, nil, err
 	}
-	return header, bytes, nil
+	return header, append(header.Bytes, remainBytes...), nil
 }
