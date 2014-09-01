@@ -34,6 +34,16 @@ func (g *tGtid) String() (ret string) {
 	return ret
 }
 
+func newSingleGtid(uuid string, num uint64) tGtid {
+	gtid := tGtid{}
+	sid := tSid{}
+	sid.serverUuid = uuid
+	interval := tInterval{num, num}
+	sid.intervals = []tInterval{interval}
+	gtid.sids = []tSid{sid}
+	return gtid
+}
+
 func parseGtid(desc string) (gtid tGtid, err error) {
 	desc = strings.TrimSpace(desc)
 	if "" == desc {

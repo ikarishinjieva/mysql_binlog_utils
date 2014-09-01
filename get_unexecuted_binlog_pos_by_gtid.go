@@ -1,9 +1,5 @@
 package mysql_binlog_utils
 
-import (
-	"fmt"
-)
-
 func GetUnexecutedBinlogPosByGtid(binlogFilePath string, executedGtidDesc string) (pos uint, err error) {
 	parser, err := NewBinlogFileParserByPath(binlogFilePath)
 	if nil != err {
@@ -83,15 +79,7 @@ func GetUnexecutedBinlogPosByGtid(binlogFilePath string, executedGtidDesc string
 			bs := ele.bs
 			uuid := bytesToUuid(bs[19+1 : 19+17])
 			number := bytesToUint64(bs[19+17 : 19+17+8])
-			gtid, err := parseGtid(fmt.Sprintf("%v:%v", uuid, number))
-			if nil != err {
-				select {
-				case <-poison:
-					return
-				case returnQueue <- &tReturnQueueElement{0, err}:
-				}
-				return
-			}
+			gtid := newSingleGtid(uuid, number)
 			if !containsGtid(executedGtid, gtid) {
 				select {
 				case <-poison:
