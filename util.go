@@ -1,8 +1,10 @@
 package mysql_binlog_utils
 
 import (
+	"bytes"
 	"encoding/hex"
 	"strings"
+	"sync"
 )
 
 func intToBytes(num int, buf []byte) []byte {
@@ -46,6 +48,25 @@ func bytesToUint64(buf []byte) uint64 {
 	return a
 }
 
+type tBytesToUuidCache struct {
+	mutex sync.RWMutex
+	bs    []byte
+	uuid  string
+}
+
+var bytesToUuidCache tBytesToUuidCache
+
 func bytesToUuid(buf []byte) (ret string) {
-	return strings.ToUpper(hex.EncodeToString(buf))
+	bytesToUuidCache.mutex.RLock()
+	if 0 == bytes.Compare(buf, bytesToUuidCache.bs) {
+		bytesToUuidCache.mutex.RUnlock()
+		return bytesToUuidCache.uuid
+	}
+	bytesToUuidCache.mutex.RUnlock()
+	uuid := strings.ToUpper(hex.EncodeToString(buf))
+	bytesToUuidCache.mutex.Lock()
+	bytesToUuidCache.bs = buf
+	bytesToUuidCache.uuid = uuid
+	bytesToUuidCache.mutex.Unlock()
+	return uuid
 }
