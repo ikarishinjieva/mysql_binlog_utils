@@ -65,7 +65,8 @@ func bytesToUuid(buf []byte) (ret string) {
 	bytesToUuidCache.mutex.RUnlock()
 	uuid := strings.ToUpper(hex.EncodeToString(buf))
 	bytesToUuidCache.mutex.Lock()
-	bytesToUuidCache.bs = buf
+	bytesToUuidCache.bs = make([]byte, len(buf))
+	copy(bytesToUuidCache.bs, buf)
 	bytesToUuidCache.uuid = uuid
 	bytesToUuidCache.mutex.Unlock()
 	return uuid

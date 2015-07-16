@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var binlogFileSuffixPattern = regexp.MustCompile("\\d\\d\\d\\d\\d\\d$")
+
 func NextBinlogPath(binlogPath string) (string, error) {
 	r := regexp.MustCompile("(.*)\\.(\\d\\d\\d\\d\\d\\d)$")
 	if !r.MatchString(binlogPath) {

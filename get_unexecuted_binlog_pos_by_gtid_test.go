@@ -6,7 +6,7 @@ import (
 
 func TestGetUnexecutedBinlogPosByGtid(t *testing.T) {
 	executedGtid := "f60ab33c-c604-11e3-8e1c-e66ccf50db66:1-124"
-	pos, err := GetUnexecutedBinlogPosByGtid("./test/mysql-bin56.000003", executedGtid)
+	pos, err := GetUnexecutedBinlogPosByGtid("./test/mysql-bin56.000003", executedGtid, false)
 	if nil != err {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -17,7 +17,7 @@ func TestGetUnexecutedBinlogPosByGtid(t *testing.T) {
 
 func TestGetUnexecutedBinlogPosByGtid2(t *testing.T) {
 	executedGtid := "f60ab33c-c604-11e3-8e1c-e66ccf50db66:1-136"
-	_, err := GetUnexecutedBinlogPosByGtid("./test/mysql-bin56.000003", executedGtid)
+	_, err := GetUnexecutedBinlogPosByGtid("./test/mysql-bin56.000003", executedGtid, false)
 	if nil == err || "EOF" != err.Error() {
 		t.Fatalf("wrong err %v", err)
 	}

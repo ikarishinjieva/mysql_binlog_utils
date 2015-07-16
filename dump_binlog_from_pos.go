@@ -1,6 +1,7 @@
 package mysql_binlog_utils
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
@@ -12,40 +13,50 @@ func innerDumpBinlogFromPos(srcFilePath string, startPos uint, dumpEmptyBinlog b
 	if nil != err {
 		return err
 	}
-
 	defer srcFile.Close()
 
-	parser, err := NewBinlogFileParser(srcFile)
+	stat, err := srcFile.Stat()
 	if nil != err {
 		return err
 	}
-	defer parser.Destroy()
+	srcFileSize := uint(stat.Size())
 
 	if dumpEmptyBinlog {
-		startPos = parser.FileSize()
+		startPos = srcFileSize
 	}
 
-	if startPos > parser.FileSize() {
-		return fmt.Errorf("startPos (%v) >= binlog file size (%v)", startPos, parser.FileSize())
+	if startPos > srcFileSize {
+		return fmt.Errorf("startPos (%v) >= binlog file size (%v)", startPos, srcFileSize)
 	}
 
-	emptyFile := startPos == parser.FileSize()
-
+	emptyFile := startPos == srcFileSize
+	headerBs := make([]byte, 19)
 	headerEndPos := uint(4)
+
 	for {
-		if headerEndPos >= parser.FileSize() {
-			break
-		}
-		if e, err := parser.ReadEventFixedHeader(headerEndPos); nil != err {
+		if _, err := srcFile.Seek(int64(headerEndPos), 0); nil != err {
+			if "EOF" == err.Error() {
+				break
+			}
 			return err
-		} else if FORMAT_DESCRIPTION_EVENT != e.EventType && ROTATE_EVENT != e.EventType && PREVIOUS_GTIDS_LOG_EVENT != e.EventType {
-			break
-		} else {
-			headerEndPos = headerEndPos + e.EventLength
 		}
+
+		if _, err := io.ReadFull(srcFile, headerBs); nil != err {
+			if "EOF" == err.Error() {
+				break
+			}
+			return err
+		}
+
+		eventType := int(headerBs[4])
+		length := binary.LittleEndian.Uint32(headerBs[9:13])
+		if FORMAT_DESCRIPTION_EVENT != eventType && ROTATE_EVENT != eventType && PREVIOUS_GTIDS_LOG_EVENT != eventType {
+			break
+		}
+		headerEndPos += uint(length)
 	}
 
-	if headerEndPos >= parser.FileSize() {
+	if headerEndPos >= srcFileSize {
 		emptyFile = true
 	} else if startPos < headerEndPos {
 		return fmt.Errorf("dump binlog from startPos (%v) failed, pos < headerEndPos (%v) ", startPos, headerEndPos)
@@ -85,9 +96,9 @@ func DumpBinlogFromPos(srcFilePath string, startPos uint, targetFilePath string)
 	return innerDumpBinlogFromPos(srcFilePath, startPos, false, targetFilePath)
 }
 
-func DumpUnexecutedBinlogByGtid(srcFilePath string, executedGtidDesc string, targetFilePath string) error {
-	pos, err := GetUnexecutedBinlogPosByGtid(srcFilePath, executedGtidDesc)
-	if nil != err && "EOF" == err.Error() {
+func DumpUnexecutedBinlogByGtid(srcFilePath string, executedGtidDesc string, targetFilePath string, includeEventBeforeFirst bool) error {
+	pos, err := GetUnexecutedBinlogPosByGtid(srcFilePath, executedGtidDesc, includeEventBeforeFirst)
+	if nil != err {
 		if "EOF" == err.Error() {
 			return innerDumpBinlogFromPos(srcFilePath, 0, true, targetFilePath)
 		} else {

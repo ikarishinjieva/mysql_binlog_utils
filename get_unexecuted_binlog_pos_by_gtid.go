@@ -1,103 +1,66 @@
 package mysql_binlog_utils
 
-func GetUnexecutedBinlogPosByGtid(binlogFilePath string, executedGtidDesc string) (pos uint, err error) {
-	parser, err := NewBinlogFileParserByPath(binlogFilePath)
+import (
+	"encoding/binary"
+	gtid "github.com/ikarishinjieva/go-gtid"
+	"io"
+	"os"
+	"strconv"
+)
+
+func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, includeEventBeforeFirst bool) (pos uint, err error) {
+	file, err := os.Open(binlogPath)
 	if nil != err {
 		return 0, err
 	}
-	defer parser.Destroy()
+	defer file.Close()
 
-	executedGtid, err := parseGtid(executedGtidDesc)
-	if nil != err {
-		return 0, err
-	}
+	p := uint32(4)
+	headerBs := make([]byte, 19)
+	payloadBs := make([]byte, 1024)
+	lastExecutedGtidPos := uint32(0)
 
-	poison := make(chan bool, 2)
-	type tProcessQueueElement struct {
-		bs  []byte
-		pos uint
-		err error
-	}
-	processQueue := make(chan *tProcessQueueElement, 100)
-
-	//read thread
-	go func() {
-		p := uint(4)
-		for {
-			select {
-			case <-poison:
-				return
-			default:
-			}
-			header, bs, err := parser.ReadEventBytes(p)
-			if nil != err {
-				select {
-				case <-poison:
-					return
-				case processQueue <- &tProcessQueueElement{nil, 0, err}:
-				}
-				return
-			}
-			if GTID_LOG_EVENT != header.EventType {
-				p += header.EventLength
-				continue
-			}
-			select {
-			case <-poison:
-				return
-			case processQueue <- &tProcessQueueElement{bs, p, nil}:
-			}
-
-			p += header.EventLength
+	for {
+		if _, err := file.Seek(int64(p), 0); nil != err {
+			return 0, err
 		}
-	}()
 
-	//process thread
-
-	type tReturnQueueElement struct {
-		pos uint
-		err error
-	}
-	returnQueue := make(chan *tReturnQueueElement, 1)
-
-	go func() {
-		for {
-			var ele *tProcessQueueElement
-			select {
-			case <-poison:
-				return
-			case ele = <-processQueue:
-			}
-			if nil != ele.err {
-				select {
-				case <-poison:
-					return
-				case returnQueue <- &tReturnQueueElement{0, ele.err}:
-				}
-				return
-			}
-			bs := ele.bs
-			uuid := bytesToUuid(bs[19+1 : 19+17])
-			number := bytesToUint64(bs[19+17 : 19+17+8])
-			gtid := newSingleGtid(uuid, number)
-			if !containsGtid(executedGtid, gtid) {
-				select {
-				case <-poison:
-					return
-				case returnQueue <- &tReturnQueueElement{ele.pos, nil}:
-				}
-				return
-			}
+		if _, err := io.ReadFull(file, headerBs); nil != err {
+			return 0, err
 		}
-	}()
 
-	defer func() {
-		poison <- true
-		poison <- true
-	}()
+		length := binary.LittleEndian.Uint32(headerBs[9:13])
+		eventType := int(headerBs[4])
 
-	select {
-	case ret := <-returnQueue:
-		return ret.pos, ret.err
+		if GTID_LOG_EVENT != eventType {
+			p += length
+			continue
+		}
+
+		if length > uint32(len(payloadBs)) {
+			payloadBs = make([]byte, length)
+		}
+
+		if _, err := io.ReadFull(file, payloadBs[:length]); nil != err {
+			return 0, err
+		}
+
+		uuid := bytesToUuid(payloadBs[1:17])
+		number := bytesToUint64(payloadBs[17:25])
+		g := uuid + ":" + strconv.FormatUint(number, 10)
+		contain, err := gtid.GtidContain(executedGtidDesc, g)
+		if nil != err {
+			return 0, err
+		}
+		if contain {
+			lastExecutedGtidPos = p
+			p += length
+		} else {
+			retPos := p
+			if includeEventBeforeFirst && 0 != lastExecutedGtidPos {
+				retPos = lastExecutedGtidPos
+			}
+			return uint(retPos), nil
+		}
 	}
 }

@@ -28,7 +28,7 @@ func TestDumpBinlogFromPos1(t *testing.T) {
 
 func TestDumpUnexecutedBinlogByGtid(t *testing.T) {
 	defer os.Remove("./test/test-mysql-bin-dump")
-	if err := DumpUnexecutedBinlogByGtid("./test/mysql-bin56.000003", "f60ab33c-c604-11e3-8e1c-e66ccf50db66:1-73", "./test/test-mysql-bin-dump"); nil != err {
+	if err := DumpUnexecutedBinlogByGtid("./test/mysql-bin56.000003", "f60ab33c-c604-11e3-8e1c-e66ccf50db66:1-73", "./test/test-mysql-bin-dump", false); nil != err {
 		t.Errorf("expect no err, but got %v", err)
 	}
 	if err := exec.Command("sh", "-c", "./test/mysqlbinlog ./test/test-mysql-bin-dump > /dev/null").Run(); nil != err {
