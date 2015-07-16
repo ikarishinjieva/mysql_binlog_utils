@@ -37,11 +37,12 @@ func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, in
 			continue
 		}
 
-		if length > uint32(len(payloadBs)) {
-			payloadBs = make([]byte, length)
+		payloadLength := length - 19
+		if payloadLength > uint32(len(payloadBs)) {
+			payloadBs = make([]byte, payloadLength)
 		}
 
-		if _, err := io.ReadFull(file, payloadBs[:length]); nil != err {
+		if _, err := io.ReadFull(file, payloadBs[:payloadLength]); nil != err {
 			return 0, err
 		}
 
