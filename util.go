@@ -59,10 +59,12 @@ var bytesToUuidCache tBytesToUuidCache
 func bytesToUuid(buf []byte) (ret string) {
 	bytesToUuidCache.mutex.RLock()
 	if 0 == bytes.Compare(buf, bytesToUuidCache.bs) {
+		uuid := bytesToUuidCache.uuid
 		bytesToUuidCache.mutex.RUnlock()
-		return bytesToUuidCache.uuid
+		return uuid
 	}
 	bytesToUuidCache.mutex.RUnlock()
+
 	uuid := strings.ToUpper(hex.EncodeToString(buf))
 	bytesToUuidCache.mutex.Lock()
 	bytesToUuidCache.bs = make([]byte, len(buf))
