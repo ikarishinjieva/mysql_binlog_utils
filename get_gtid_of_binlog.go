@@ -2,10 +2,11 @@ package mysql_binlog_utils
 
 import (
 	"encoding/binary"
-	gtid "github.com/ikarishinjieva/go-gtid"
 	"io"
 	"os"
 	"strconv"
+
+	gtid "github.com/ikarishinjieva/go-gtid"
 )
 
 func GetGtidOfBinlog(binlogPath string) (gtidDesc string, err error) {
@@ -15,7 +16,7 @@ func GetGtidOfBinlog(binlogPath string) (gtidDesc string, err error) {
 	}
 	defer file.Close()
 
-	p := uint32(4)
+	p := uint64(4)
 	headerBs := make([]byte, 19)
 	gtidBs := make([]byte, 25)
 
@@ -38,7 +39,7 @@ func GetGtidOfBinlog(binlogPath string) (gtidDesc string, err error) {
 		eventType := int(headerBs[4])
 
 		if GTID_LOG_EVENT != eventType {
-			p += length
+			p += uint64(length)
 			continue
 		}
 
@@ -55,7 +56,7 @@ func GetGtidOfBinlog(binlogPath string) (gtidDesc string, err error) {
 			return gtidDesc, err
 		}
 
-		p += length
+		p += uint64(length)
 	}
 	return gtidDesc, nil
 }
