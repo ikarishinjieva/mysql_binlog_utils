@@ -16,13 +16,13 @@ func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, in
 	}
 	defer file.Close()
 
-	p := uint64(4)
+	p := int64(4)
 	headerBs := make([]byte, 19)
 	payloadBs := make([]byte, 1024)
-	lastExecutedGtidPos := uint64(0)
+	lastExecutedGtidPos := int64(0)
 
 	for {
-		if _, err := file.Seek(int64(p), 0); nil != err {
+		if _, err := file.Seek(p, 0); nil != err {
 			return 0, err
 		}
 
@@ -34,7 +34,7 @@ func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, in
 		eventType := int(headerBs[4])
 
 		if GTID_LOG_EVENT != eventType {
-			p += uint64(length)
+			p += int64(length)
 			continue
 		}
 
@@ -56,7 +56,7 @@ func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, in
 		}
 		if contain {
 			lastExecutedGtidPos = p
-			p += uint64(length)
+			p += int64(length)
 		} else {
 			retPos := p
 			if includeEventBeforeFirst && 0 != lastExecutedGtidPos {
