@@ -14,12 +14,12 @@ func GetPreviousGtids(binlogPath string) (gtidDesc string, err error) {
 	}
 	defer file.Close()
 
-	p := uint32(4)
+	p := int64(4)
 	headerBs := make([]byte, 19)
 	payloadBs := make([]byte, 1024)
 
 	for {
-		if _, err := file.Seek(int64(p), 0); nil != err {
+		if _, err := file.Seek(p, 0); nil != err {
 			if "EOF" == err.Error() {
 				break
 			}
@@ -37,7 +37,7 @@ func GetPreviousGtids(binlogPath string) (gtidDesc string, err error) {
 		eventType := int(headerBs[4])
 
 		if PREVIOUS_GTIDS_LOG_EVENT != eventType {
-			p += length
+			p += int64(length)
 			continue
 		}
 

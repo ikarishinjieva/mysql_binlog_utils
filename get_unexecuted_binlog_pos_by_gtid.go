@@ -2,10 +2,11 @@ package mysql_binlog_utils
 
 import (
 	"encoding/binary"
-	gtid "github.com/ikarishinjieva/go-gtid"
 	"io"
 	"os"
 	"strconv"
+
+	gtid "github.com/ikarishinjieva/go-gtid"
 )
 
 func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, includeEventBeforeFirst bool) (pos uint, err error) {
@@ -15,13 +16,13 @@ func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, in
 	}
 	defer file.Close()
 
-	p := uint32(4)
+	p := int64(4)
 	headerBs := make([]byte, 19)
 	payloadBs := make([]byte, 1024)
-	lastExecutedGtidPos := uint32(0)
+	lastExecutedGtidPos := int64(0)
 
 	for {
-		if _, err := file.Seek(int64(p), 0); nil != err {
+		if _, err := file.Seek(p, 0); nil != err {
 			return 0, err
 		}
 
@@ -33,7 +34,7 @@ func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, in
 		eventType := int(headerBs[4])
 
 		if GTID_LOG_EVENT != eventType {
-			p += length
+			p += int64(length)
 			continue
 		}
 
@@ -55,7 +56,7 @@ func GetUnexecutedBinlogPosByGtid(binlogPath string, executedGtidDesc string, in
 		}
 		if contain {
 			lastExecutedGtidPos = p
-			p += length
+			p += int64(length)
 		} else {
 			retPos := p
 			if includeEventBeforeFirst && 0 != lastExecutedGtidPos {
